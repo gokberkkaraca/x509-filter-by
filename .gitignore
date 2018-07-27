@@ -10,3 +10,10 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+#IntelliJ IDEA
+.idea/
+.DS_Store
+
+#Certificates
+certificates/
