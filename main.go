@@ -91,5 +91,9 @@ func parseCertificateFromFile(inputFile *os.File) (x509.Certificate, error) {
 	}
 
 	c, err := x509.ParseCertificate(asn1Data)
-	return *c, err
+	if err == nil {
+		return *c, err
+	}
+	fmt.Println("Unable to parse certificate: ", inputFile.Name())
+	return x509.Certificate{}, err
 }
