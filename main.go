@@ -8,51 +8,65 @@ import (
 	"crypto/x509"
 	"strings"
 	"fmt"
+	"strconv"
 )
-var years = []string{"2015, 2016, 2017, 2018"}
-var months = []string{"january, february, march, april, may, june, july, august, september, october, november, december"}
+
+var years []string
+var months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+var pathToCertificates = "./certificates/leaf_cert/"
 
 func main() {
-	var pathToCertificates = "./certificates/"
-	categorizeByCA(pathToCertificates)
-}
-
-func categorizeByCA(pathToCertificates string) {
 	files, err := ioutil.ReadDir(pathToCertificates)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, file := range files {
-		var fileFmt = ""
-		if strings.HasSuffix(file.Name(), "pem") {
-			fileFmt = "pem"
-		}
-		if strings.HasSuffix(file.Name(), "der") {
-			fileFmt = "der"
-		}
+	for year := 1990; year <= 2018; year++ {
+		years = append(years, strconv.Itoa(year))
+	}
 
-		if fileFmt != "" {
-			var inputFile *os.File
-			var err error
-			inputFile, err = os.Open(pathToCertificates + file.Name())
-			if err != nil {
-				log.Fatalf("unable to open file %s: %s", file.Name(), err)
-			}
-			nameOfCA, err := findIssuerOfCertificate(inputFile, fileFmt)
-			if err == nil {
-				os.Mkdir(pathToCertificates + nameOfCA, 0755)
-				err = os.Rename(pathToCertificates + file.Name(), pathToCertificates + nameOfCA + "/" + file.Name())
-				if err != nil {
-					fmt.Println(err)
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		var inputFile *os.File
+		var err error
+		inputFile, err = os.Open(pathToCertificates + file.Name())
+		if err != nil {
+			log.Fatalf("unable to open file %s: %s", file.Name(), err)
+		}
+		cert, err := parseCertificateFromFile(inputFile)
+		if err == nil {
+			caPath := pathToCertificates + cert.Issuer.Organization[0]
+			os.Mkdir(caPath, 0755)
+			for _, y := range years {
+				yearPath := caPath + "/" + y
+				os.Mkdir(yearPath, 0755)
+				for _, m := range months {
+					monthPath := yearPath + "/" + m
+					os.Mkdir(monthPath, 0755)
 				}
 			}
-			inputFile.Close()
+			certYear, certMonth := cert.NotBefore.Year(), cert.NotBefore.Month().String()
+			certPath := caPath + "/" + strconv.Itoa(certYear) + "/" + certMonth + "/"
+			err = os.Rename(pathToCertificates + file.Name(), certPath + file.Name())
+			if err != nil {
+				fmt.Println("Failed to move certificate", err)
+			}
 		}
+		inputFile.Close()
 	}
 }
 
-func findIssuerOfCertificate(inputFile *os.File, fileFmt string) (str string, err error) {
+func parseCertificateFromFile(inputFile *os.File) (x509.Certificate, error) {
+	var fileFmt = ""
+	if strings.HasSuffix(inputFile.Name(), "pem") {
+		fileFmt = "pem"
+	}
+	if strings.HasSuffix(inputFile.Name(), "der") {
+		fileFmt = "der"
+	}
+
 	fileBytes, err := ioutil.ReadAll(inputFile)
 	if err != nil {
 		log.Fatalf("unable to read file %s: %s", inputFile.Name(), err)
@@ -72,11 +86,6 @@ func findIssuerOfCertificate(inputFile *os.File, fileFmt string) (str string, er
 		log.Fatalf("unknown input format %s", fileFmt)
 	}
 
-	var name = ""
 	c, err := x509.ParseCertificate(asn1Data)
-	if err == nil {
-		name = c.Issuer.Organization[0]
-	}
-	fmt.Println("Could not extract certificate issuer", err)
-	return name, err
+	return *c, err
 }
