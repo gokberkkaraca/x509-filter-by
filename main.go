@@ -13,22 +13,26 @@ import (
 
 var years []string
 var months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
-var pathToCertificates = "./certificates/leaf_cert/"
+var pathToCertificates = "./certificates/"
 
 func main() {
+	fmt.Println("Starting certificate classifier")
 	files, err := ioutil.ReadDir(pathToCertificates)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("All the certificates in the directory are read")
 
 	for year := 1990; year <= 2018; year++ {
 		years = append(years, strconv.Itoa(year))
 	}
 
+	fmt.Println("Starting to parse certificates")
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
+		fmt.Println("Certificate being processed:", file.Name())
 		var inputFile *os.File
 		var err error
 		inputFile, err = os.Open(pathToCertificates + file.Name())
