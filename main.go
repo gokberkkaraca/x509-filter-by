@@ -9,11 +9,12 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
+	"time"
 )
 
-var years []string
-var months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
-var pathToCertificates = "./certificates/"
+var pathToCertificates = "~/workspace/certificates/sorted_certificates"
+var year = 2012
+var outputPath = "~/workspace/certificates/" + strconv.Itoa(year)
 
 func main() {
 	fmt.Println("Starting certificate classifier")
@@ -22,12 +23,9 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("All the certificates in the directory are read")
-
-	for year := 1990; year <= 2018; year++ {
-		years = append(years, strconv.Itoa(year))
-	}
-
 	fmt.Println("Starting to parse certificates")
+
+	os.Mkdir(outputPath, 0755)
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -41,21 +39,11 @@ func main() {
 		}
 		cert, err := parseCertificateFromFile(inputFile)
 		if err == nil {
-			caPath := pathToCertificates + cert.Issuer.Organization[0]
-			os.Mkdir(caPath, 0755)
-			for _, y := range years {
-				yearPath := caPath + "/" + y
-				os.Mkdir(yearPath, 0755)
-				for _, m := range months {
-					monthPath := yearPath + "/" + m
-					os.Mkdir(monthPath, 0755)
+			if cert.NotBefore.Sub(time.Date(year, time.January, 1, 0,0,0,0, time.UTC)) >= 0 {
+				err = os.Rename(pathToCertificates + file.Name(), outputPath + file.Name())
+				if err != nil {
+					fmt.Println("Failed to move certificate", err)
 				}
-			}
-			certYear, certMonth := cert.NotBefore.Year(), cert.NotBefore.Month().String()
-			certPath := caPath + "/" + strconv.Itoa(certYear) + "/" + certMonth + "/"
-			err = os.Rename(pathToCertificates + file.Name(), certPath + file.Name())
-			if err != nil {
-				fmt.Println("Failed to move certificate", err)
 			}
 		}
 		inputFile.Close()
