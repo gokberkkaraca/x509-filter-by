@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-var pathToCertificates = "~/workspace/certificates/sorted_certificates"
+var pathToCertificates = "./sorted_certificates/"
 var year = 2012
-var outputPath = "~/workspace/certificates/" + strconv.Itoa(year)
+var outputPath = "./" + strconv.Itoa(year) + "/"
 
 func main() {
 	fmt.Println("Starting certificate classifier")
